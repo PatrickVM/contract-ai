@@ -1,0 +1,82 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: contract_ai_postgres
+    environment:
+      POSTGRES_DB: contract_ai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - contract_ai_network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: contract_ai_redis
+    networks:
+      - contract_ai_network
+
+  # Whisper ASR Service (using a publicly available image)
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: contract_ai_whisper
+    environment:
+      - ASR_MODEL=base
+      - ASR_DEVICE=cpu
+    ports:
+      - "9000:9000"
+    volumes:
+      - whisper_models:/root/.cache/whisper
+    networks:
+      - contract_ai_network
+
+  # Backend API Server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: contract_ai_backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/contract_ai
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - BACKEND_PORT=3001
+      - BACKEND_URL=http://localhost:3001
+      - WHISPER_API_URL=http://whisper:9000/asr
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+      - whisper
+    networks:
+      - contract_ai_network
+
+  # Frontend Next.js App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: contract_ai_frontend
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - contract_ai_network
+
+volumes:
+  postgres_data:
+  whisper_models:
+
+networks:
+  contract_ai_network:
+    driver: bridge

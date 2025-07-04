@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Conversation {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique
+  channel     Channel  @default(CHAT)
+  status      ConversationStatus @default(ACTIVE)
+  phoneNumber String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Project details
+  bigIdea     String?
+  features    String?
+  timeline    String?
+  budget      String?
+  techPreferences String?
+  
+  // AI assessment
+  feasibilityScore Int?
+  feasibilityNotes String?
+  recommendedTechStack String?
+  
+  // Relationships
+  messages    Message[]
+  report      Report?
+  
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  timestamp      DateTime @default(now())
+  
+  // Voice-specific fields
+  audioUrl       String?
+  transcription  String?
+  
+  // Relationships
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}
+
+model Report {
+  id             String   @id @default(cuid())
+  conversationId String   @unique
+  summary        String
+  feasibility    String
+  techStack      String
+  recommendations String
+  riskFactors    String
+  estimatedCost  String?
+  estimatedTimeline String?
+  createdAt      DateTime @default(now())
+  
+  // Relationships
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@map("reports")
+}
+
+enum Channel {
+  CHAT
+  VOICE
+}
+
+enum ConversationStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+} 
