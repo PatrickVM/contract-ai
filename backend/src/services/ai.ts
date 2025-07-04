@@ -180,21 +180,33 @@ export class AIService {
     let currentSection = "";
     const sections: Record<string, string> = {};
 
+    const headerMap: Record<string, string> = {
+      "**Summary**": "summary",
+      "**Feasibility Assessment**": "feasibility",
+      "**Recommended Tech Stack**": "techStack",
+      "**Recommendations**": "recommendations",
+      "**Risk Factors**": "riskFactors",
+      "**Estimated Cost**": "estimatedCost",
+      "**Estimated Timeline**": "estimatedTimeline",
+    };
+
     for (const line of lines) {
-      if (line.includes("**Summary**")) currentSection = "summary";
-      else if (line.includes("**Feasibility Assessment**"))
-        currentSection = "feasibility";
-      else if (line.includes("**Recommended Tech Stack**"))
-        currentSection = "techStack";
-      else if (line.includes("**Recommendations**"))
-        currentSection = "recommendations";
-      else if (line.includes("**Risk Factors**"))
-        currentSection = "riskFactors";
-      else if (line.includes("**Estimated Cost**"))
-        currentSection = "estimatedCost";
-      else if (line.includes("**Estimated Timeline**"))
-        currentSection = "estimatedTimeline";
-      else if (currentSection && line.trim()) {
+      const header = Object.keys(headerMap).find((h) => line.includes(h));
+
+      if (header) {
+        currentSection = headerMap[header];
+        const afterHeader = line.split(header)[1];
+        if (afterHeader) {
+          const content = afterHeader.replace(/^[\s:.-]+/, "").trim();
+          if (content) {
+            sections[currentSection] =
+              (sections[currentSection] || "") + content + " ";
+          }
+        }
+        continue;
+      }
+
+      if (currentSection && line.trim()) {
         sections[currentSection] =
           (sections[currentSection] || "") + line.trim() + " ";
       }
